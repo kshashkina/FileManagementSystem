@@ -75,13 +75,16 @@ public:
             std::cout << "Received data: " << buffer << std::endl;
 
             if (strncmp(buffer, "LIST", 4) == 0) {
-                sendFileList(clientSocket);
+                handleListCommand(clientSocket);
             }
             else if (strncmp(buffer, "DELETE", 6) == 0){
                 handleDeleteCommand(clientSocket, buffer);
             }
             else if (strncmp(buffer, "GET", 3) == 0){
                 handleGetCommand(clientSocket, buffer);
+            }
+            else if (strncmp(buffer, "PUT", 3) == 0){
+                handlePutCommand(clientSocket, buffer);
             }
             else {
                 const char* response = "Unknown command. Valid commands: LIST";
@@ -93,7 +96,7 @@ public:
         closesocket(clientSocket);
     }
 
-    void sendFileList(SOCKET clientSocket) {
+    void handleListCommand(SOCKET clientSocket) {
         std::ostringstream fileList;
 
         for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage")) {
@@ -148,6 +151,21 @@ public:
             send(clientSocket, response, (int)strlen(response), 0);
         }
     }
+
+    void handlePutCommand(SOCKET clientSocket, const char* buffer) {
+        std::string fileName(buffer + 4);
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+
+        std::ofstream file(fileName, std::ios::binary);
+        if (file.is_open()) {
+            const char* response = "File created successfully.";
+            send(clientSocket, response, (int)strlen(response), 0);
+        } else {
+            const char* response = "Failed to create the file.";
+            send(clientSocket, response, (int)strlen(response), 0);
+        }
+    }
+
 
 
     void cleanup() {

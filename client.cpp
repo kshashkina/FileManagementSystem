@@ -49,43 +49,20 @@ public:
 
     void communicate() {
         std::string userInput;
-        std::cout << "Enter command (LIST to get file list): ";
+        std::cout << "Enter command \nGET <filename> to get file\nLIST to get file list\nPUT <filename> to create new file\nDELETE <filename> to delete file\nINFO <filename> to get information about file\n";
         std::getline(std::cin, userInput);
 
         send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
-
-        if (userInput == "LIST") {
-            receiveFileList();
-        }
-        else if (userInput == "DELETE") {
-            receiveResponse();
-        }
-        else if (userInput == "GET") {
-            receiveResponse();
-        }
-        else {
-            // General response that the command is not supported
-            receiveResponse();
-        }
+        receiveResponse();
     }
 
-    // Receive the list response from the server
-    void receiveFileList() {
-        char buffer[1024];
-        memset(buffer, 0, 1024);
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived > 0) {
-            std::cout << "File list from server:\n" << buffer << std::endl;
-        }
-    }
-
-    // Receive the general response from the server
+    // Receive response from the server
     void receiveResponse() {
         char buffer[1024];
         memset(buffer, 0, 1024);
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived > 0) {
-            std::cout << "Received from server: " << buffer << std::endl;
+            std::cout << "Received from server: \n " << buffer << std::endl;
         }
     }
 
