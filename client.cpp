@@ -29,8 +29,6 @@ public:
         // Set up server address
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(port);
-
-        // Use regular string for IP address
         InetPton(AF_INET, serverIp, &serverAddr.sin_addr);
 
         return true;
@@ -48,15 +46,21 @@ public:
     }
 
     void communicate() {
-        std::string userInput;
-        std::cout << "Enter command \nGET <filename> to get file\nLIST to get file list\nPUT <filename> to create new file\nDELETE <filename> to delete file\nINFO <filename> to get information about file\n";
-        std::getline(std::cin, userInput);
+        std::cout << "Commands:\nGET <filename> to get file\nLIST to get file list\nPUT <filename> to create new file\nDELETE <filename> to delete file\nINFO <filename> to get information about file\nEXIT to exit\n";
+        while (true) {
+            std::string userInput;
+            std::cout << "Enter command:\n";
+            std::getline(std::cin, userInput);
 
-        send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
-        receiveResponse();
+            send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
+            if (userInput == "EXIT") {
+                break;
+            }
+
+            receiveResponse();
+        }
     }
 
-    // Receive response from the server
     void receiveResponse() {
         char buffer[1024];
         memset(buffer, 0, 1024);
@@ -91,8 +95,9 @@ int main() {
 
     if (client.init() && client.connectToServer()) {
         client.communicate();
-        client.cleanup();
     }
+
+    client.cleanup();
 
     return 0;
 }

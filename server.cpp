@@ -59,7 +59,6 @@ public:
     }
 
     void acceptConnection() {
-        // Accept a client connection
         SOCKET clientSocket = accept(serverSocket, nullptr, nullptr);
         if (clientSocket == INVALID_SOCKET) {
             std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
@@ -67,37 +66,43 @@ public:
             return;
         }
 
-        // Receive data from the client
-        char buffer[1024];
-        memset(buffer, 0, 1024);
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived > 0) {
-            std::cout << "Received data: " << buffer << std::endl;
+        while (true) {
+            char buffer[1024];
+            memset(buffer, 0, 1024);
+            int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
 
-            if (strncmp(buffer, "LIST", 4) == 0) {
-                handleListCommand(clientSocket);
-            }
-            else if (strncmp(buffer, "DELETE", 6) == 0){
-                handleDeleteCommand(clientSocket, buffer);
-            }
-            else if (strncmp(buffer, "GET", 3) == 0){
-                handleGetCommand(clientSocket, buffer);
-            }
-            else if (strncmp(buffer, "PUT", 3) == 0){
-                handlePutCommand(clientSocket, buffer);
-            }
-            else if (strncmp(buffer, "INFO", 4) == 0){
-                handleInfoCommand(clientSocket, buffer);
-            }
-            else {
-                const char* response = "Unknown command.";
-                send(clientSocket, response, (int)strlen(response), 0);
+            if (bytesReceived > 0) {
+                buffer[bytesReceived] = '\0';
+                std::cout << "Received data: " << buffer << std::endl;
+
+                if (strncmp(buffer, "LIST", 4) == 0) {
+                    handleListCommand(clientSocket);
+                }
+                else if (strncmp(buffer, "DELETE", 6) == 0){
+                    handleDeleteCommand(clientSocket, buffer);
+                }
+                else if (strncmp(buffer, "GET", 3) == 0){
+                    handleGetCommand(clientSocket, buffer);
+                }
+                else if (strncmp(buffer, "PUT", 3) == 0){
+                    handlePutCommand(clientSocket, buffer);
+                }
+                else if (strncmp(buffer, "INFO", 4) == 0){
+                    handleInfoCommand(clientSocket, buffer);
+                }
+                else if (strncmp(buffer, "EXIT", 4) == 0){
+                    conected = false;
+                    break;
+                }
+                else {
+                    const char* response = "Unknown command.";
+                    send(clientSocket, response, (int)strlen(response), 0);
+                }
             }
         }
-
-        // Clean up
         closesocket(clientSocket);
     }
+
 
     void handleListCommand(SOCKET clientSocket) {
         std::ostringstream fileList;
@@ -208,18 +213,23 @@ public:
         WSACleanup();
     }
 
+    bool checkConnection(){
+        return conected;
+    }
+
 private:
     int port;
     SOCKET serverSocket;
     sockaddr_in serverAddr;
     WSADATA wsaData;
+    bool conected = true;
 };
 
 int main() {
     Server server(12345);
 
     if (server.init() && server.startListening()) {
-        while (true){
+        while (server.checkConnection()){
             server.acceptConnection();
         }
     }
