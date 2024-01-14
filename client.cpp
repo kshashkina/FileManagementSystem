@@ -57,9 +57,13 @@ public:
         if (userInput == "LIST") {
             receiveFileList();
         }
-        else if (userInput.find("DELETE") == 0) {
+        else if (userInput == "DELETE") {
             receiveResponse();
-        } else {
+        }
+        else if (userInput == "GET") {
+            receiveResponse();
+        }
+        else {
             // General response that the command is not supported
             receiveResponse();
         }

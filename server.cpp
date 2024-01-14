@@ -2,6 +2,8 @@
 #include <WinSock2.h>
 #include <filesystem>
 #include <sstream>
+#include <fstream>
+#include <vector>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -78,6 +80,9 @@ public:
             else if (strncmp(buffer, "DELETE", 6) == 0){
                 handleDeleteCommand(clientSocket, buffer);
             }
+            else if (strncmp(buffer, "GET", 3) == 0){
+                handleGetCommand(clientSocket, buffer);
+            }
             else {
                 const char* response = "Unknown command. Valid commands: LIST";
                 send(clientSocket, response, (int)strlen(response), 0);
@@ -117,6 +122,34 @@ public:
         }
     }
 
+    void handleGetCommand(SOCKET clientSocket, const char* buffer) {
+        std::string fileName(buffer + 4);
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+
+        if (std::filesystem::exists(fileName)) {
+            std::ifstream file(fileName, std::ios::binary);
+            if (file.is_open()) {
+                // Calculating file size
+                file.seekg(0, std::ios::end);
+                size_t fileSize = file.tellg();
+                file.seekg(0, std::ios::beg);
+
+                // Creating a buffer sized as text in order not to reallocate memory
+                std::vector<char> fileContent(fileSize);
+                file.read(fileContent.data(), fileSize);
+
+                send(clientSocket, fileContent.data(), static_cast<int>(fileSize), 0);
+            } else {
+                const char* response = "Failed to open the file for reading.";
+                send(clientSocket, response, (int)strlen(response), 0);
+            }
+        } else {
+            const char* response = "File not found. Check the file name and try again.";
+            send(clientSocket, response, (int)strlen(response), 0);
+        }
+    }
+
+
     void cleanup() {
         if (serverSocket != INVALID_SOCKET) {
             closesocket(serverSocket);
@@ -137,8 +170,9 @@ int main() {
     Server server(12345);
 
     if (server.init() && server.startListening()) {
-        server.acceptConnection();
-        server.cleanup();
+        while (true){
+            server.acceptConnection();
+        }
     }
 
     return 0;
