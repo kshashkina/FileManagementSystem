@@ -86,8 +86,11 @@ public:
             else if (strncmp(buffer, "PUT", 3) == 0){
                 handlePutCommand(clientSocket, buffer);
             }
+            else if (strncmp(buffer, "INFO", 4) == 0){
+                handleInfoCommand(clientSocket, buffer);
+            }
             else {
-                const char* response = "Unknown command. Valid commands: LIST";
+                const char* response = "Unknown command.";
                 send(clientSocket, response, (int)strlen(response), 0);
             }
         }
@@ -166,7 +169,35 @@ public:
         }
     }
 
+    void handleInfoCommand(SOCKET clientSocket, const char* buffer) {
+        std::string fileName(buffer + 5);
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
 
+        // Get information about the file
+        std::filesystem::path filePath(fileName);
+        if (std::filesystem::exists(filePath)) {
+            std::ostringstream info;
+            info << "File Information:\n";
+            info << "Path: " << fileName << "\n";
+            info << "Size: " << std::filesystem::file_size(filePath) << " bytes\n";
+
+            std::chrono::time_point<std::filesystem::__file_clock> lastWriteTime = std::filesystem::last_write_time(filePath);
+
+            // Convert to a system_clock time point
+            auto lastWriteTimeSysClock = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                    lastWriteTime - std::filesystem::__file_clock::now() + std::chrono::system_clock::now()
+            );
+
+            std::time_t lastWriteTime_c = std::chrono::system_clock::to_time_t(lastWriteTimeSysClock);
+            info << "Last modified: " << std::ctime(&lastWriteTime_c);
+
+            const std::string& infoStr = info.str();
+            send(clientSocket, infoStr.c_str(), (int)infoStr.length(), 0);
+        } else {
+            const char* response = "File not found. Check the file name and try again.";
+            send(clientSocket, response, (int)strlen(response), 0);
+        }
+    }
 
     void cleanup() {
         if (serverSocket != INVALID_SOCKET) {
