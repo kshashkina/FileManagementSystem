@@ -1,5 +1,7 @@
 #include <iostream>
 #include <WinSock2.h>
+#include <filesystem>
+#include <sstream>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -70,13 +72,27 @@ public:
         if (bytesReceived > 0) {
             std::cout << "Received data: " << buffer << std::endl;
 
-            // Send a response back to the client
-            const char* response = "Hello, client! This is the server.";
-            send(clientSocket, response, (int)strlen(response), 0);
+            if (strncmp(buffer, "LIST", 4) == 0) {
+                sendFileList(clientSocket);
+            } else {
+                const char* response = "Unknown command. Valid commands: LIST";
+                send(clientSocket, response, (int)strlen(response), 0);
+            }
         }
 
         // Clean up
         closesocket(clientSocket);
+    }
+
+    void sendFileList(SOCKET clientSocket) {
+        std::ostringstream fileList;
+
+        for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first")) {
+            fileList << entry.path().filename().string() << "\n";
+        }
+
+        const std::string& fileListStr = fileList.str();
+        send(clientSocket, fileListStr.c_str(), (int)fileListStr.length(), 0);
     }
 
     void cleanup() {

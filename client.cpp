@@ -48,11 +48,32 @@ public:
     }
 
     void communicate() {
-        // Send data to the server
-        const char* message = "Hello, server! How are you?";
-        send(clientSocket, message, (int)strlen(message), 0);
+        std::string userInput;
+        std::cout << "Enter command (LIST to get file list): ";
+        std::getline(std::cin, userInput);
 
-        // Receive the response from the server
+        send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
+
+        if (userInput == "LIST") {
+            receiveFileList();
+        } else {
+            // General response that the command is not supported
+            receiveResponse();
+        }
+    }
+
+    // Receive the list response from the server
+    void receiveFileList() {
+        char buffer[1024];
+        memset(buffer, 0, 1024);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived > 0) {
+            std::cout << "File list from server:\n" << buffer << std::endl;
+        }
+    }
+
+    // Receive the general response from the server
+    void receiveResponse() {
         char buffer[1024];
         memset(buffer, 0, 1024);
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
