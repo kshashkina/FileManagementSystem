@@ -74,7 +74,11 @@ public:
 
             if (strncmp(buffer, "LIST", 4) == 0) {
                 sendFileList(clientSocket);
-            } else {
+            }
+            else if (strncmp(buffer, "DELETE", 6) == 0){
+                handleDeleteCommand(clientSocket, buffer);
+            }
+            else {
                 const char* response = "Unknown command. Valid commands: LIST";
                 send(clientSocket, response, (int)strlen(response), 0);
             }
@@ -87,12 +91,30 @@ public:
     void sendFileList(SOCKET clientSocket) {
         std::ostringstream fileList;
 
-        for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first")) {
+        for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage")) {
             fileList << entry.path().filename().string() << "\n";
         }
 
         const std::string& fileListStr = fileList.str();
         send(clientSocket, fileListStr.c_str(), (int)fileListStr.length(), 0);
+    }
+
+    void handleDeleteCommand(SOCKET clientSocket, const char* buffer) {
+        std::string fileName(buffer + 7);
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+
+        if (std::filesystem::exists(fileName)) {
+            if (std::filesystem::remove(fileName)) {
+                const char* response = "File deleted successfully.";
+                send(clientSocket, response, (int)strlen(response), 0);
+            } else {
+                const char* response = "Failed to delete the file. Check file permissions.";
+                send(clientSocket, response, (int)strlen(response), 0);
+            }
+        } else {
+            const char* response = "File not found. Check the file name and try again.";
+            send(clientSocket, response, (int)strlen(response), 0);
+        }
     }
 
     void cleanup() {
