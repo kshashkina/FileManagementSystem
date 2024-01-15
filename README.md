@@ -35,7 +35,8 @@ A success or failure message is sent back to the client as a response.
 The server reads the content of the specified file.
 The file content is sent back to the client as a response.
 ####  PUT Command Handling:
-The server creates a new file on the server.
+The server gets data and the data size from the client.
+The server creates a new file on the server and sends the response.
 ####  INFO Command Handling:
 The server retrieves information about the specified file (e.g., path, size, last modified time).
 The file information is sent back to the client as a response.
@@ -70,7 +71,7 @@ The server responds with success or failure.
 The client sends "GET filename" to request file content.
 The server responds with the content of the specified file.
 ####  PUT Command Handling:
-The client sends "PUT filename" to request file creation.
+The client sends "PUT filename" to request file copying to the server.
 The server responds with a success or failure message.
 ####  INFO Command Handling:
 The client sends "INFO filename" to request file information.
