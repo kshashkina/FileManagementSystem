@@ -1,6 +1,8 @@
 #include <iostream>
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
+#include <fstream>
+
 #pragma comment(lib, "ws2_32.lib")
 
 class Client {
@@ -52,12 +54,28 @@ public:
             std::cout << "Enter command:\n";
             std::getline(std::cin, userInput);
 
-            send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
             if (userInput == "EXIT") {
+                send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
                 break;
             }
+            if (userInput.substr(0, 3) == "PUT") {
+                // Extract the file path from the user input
+                size_t startQuotePos = userInput.find('"');
+                size_t endQuotePos = userInput.find('"', startQuotePos + 1);
 
-            receiveResponse();
+                if (startQuotePos != std::string::npos && endQuotePos != std::string::npos) {
+                    std::string filePath = userInput.substr(startQuotePos + 1, endQuotePos - startQuotePos - 1);
+
+                    sendFile(filePath);
+                } else {
+                    std::cerr << "Invalid file path." << std::endl;
+                }
+            }
+            else{
+                send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
+                receiveResponse();
+            }
+
         }
     }
 
@@ -68,6 +86,36 @@ public:
         if (bytesReceived > 0) {
             std::cout << "Received from server: \n " << buffer << std::endl;
         }
+    }
+
+    void sendFile(const std::string& filePath) {
+        // Open the file for reading
+        std::ifstream fileToSend(filePath, std::ios::binary);
+        if (!fileToSend.is_open()) {
+            std::cerr << "Failed to open the file: " << filePath << std::endl;
+            return;
+        }
+
+        // Get the file size
+        fileToSend.seekg(0, std::ios::end);
+        int fileSize = static_cast<int>(fileToSend.tellg());
+        fileToSend.seekg(0, std::ios::beg);
+
+        // Send the PUT command to the server
+        std::string putCommand = "PUT " + filePath;
+        send(clientSocket, putCommand.c_str(), (int)putCommand.length(), 0);
+
+        // Send the file size to the server
+        send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
+
+        // Send the file data to the server
+        char* buffer = new char[fileSize];
+        fileToSend.read(buffer, fileSize);
+        send(clientSocket, buffer, fileSize, 0);
+
+        delete[] buffer;
+        fileToSend.close();
+        receiveResponse();
     }
 
     void cleanup() {

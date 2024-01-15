@@ -31,7 +31,7 @@ public:
         }
 
         // Set up server address
-        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_family = AF_INET; //ipv4
         serverAddr.sin_addr.s_addr = INADDR_ANY;
         serverAddr.sin_port = htons(port);
 
@@ -162,16 +162,48 @@ public:
 
     void handlePutCommand(SOCKET clientSocket, const char* buffer) {
         std::string fileName(buffer + 4);
+        size_t pos = fileName.find_last_of("/\\");
+        if (pos != std::string::npos) {
+            fileName = fileName.substr(pos + 1);
+        }
         fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        if (std::filesystem::exists(fileName)) {
+            const char* response = "File already exists.";
+            send(clientSocket, response, (int)strlen(response), 0);
+            return;
+        }
 
+        // Receive the file data size from the client
+        int fileSize;
+        if (recv(clientSocket, reinterpret_cast<char*>(&fileSize), sizeof(fileSize), 0) <= 0) {
+            const char* response = "Failed to receive file size.";
+            send(clientSocket, response, (int)strlen(response), 0);
+            return;
+        }
+
+        // Receive the file data from the client
+        char* fileData = new char[fileSize];
+        int bytesReceived = recv(clientSocket, fileData, fileSize, 0);
+        if (bytesReceived <= 0) {
+            delete[] fileData;
+            const char* response = "Failed to receive file data.";
+            send(clientSocket, response, (int)strlen(response), 0);
+            return;
+        }
+
+        // Open the file for writing in binary mode
         std::ofstream file(fileName, std::ios::binary);
         if (file.is_open()) {
-            const char* response = "File created successfully.";
+            // Write the received data to the file
+            file.write(fileData, fileSize);
+
+            const char* response = "File received and saved successfully.";
             send(clientSocket, response, (int)strlen(response), 0);
         } else {
-            const char* response = "Failed to create the file.";
+            const char* response = "Failed to create or write to the file.";
             send(clientSocket, response, (int)strlen(response), 0);
         }
+        delete[] fileData;
     }
 
     void handleInfoCommand(SOCKET clientSocket, const char* buffer) {
@@ -209,7 +241,6 @@ public:
             closesocket(serverSocket);
             serverSocket = INVALID_SOCKET;
         }
-
         WSACleanup();
     }
 
