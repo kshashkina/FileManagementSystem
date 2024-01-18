@@ -135,10 +135,10 @@ public:
 
     void handleGetCommand(SOCKET clientSocket, const char* buffer) {
         std::string fileName(buffer + 4);
-        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        std::string fullPath = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
 
-        if (std::filesystem::exists(fileName)) {
-            std::ifstream file(fileName, std::ios::binary);
+        if (std::filesystem::exists(fullPath)) {
+            std::ifstream file(fullPath, std::ios::binary);
             if (file.is_open()) {
                 // Calculating file size
                 file.seekg(0, std::ios::end);
@@ -149,7 +149,15 @@ public:
                 std::vector<char> fileContent(fileSize);
                 file.read(fileContent.data(), fileSize);
 
+                // Send the file content to the client
                 send(clientSocket, fileContent.data(), static_cast<int>(fileSize), 0);
+
+                // Send the filename to the client
+                size_t lastSlashPos = fullPath.find_last_of("\\");
+                if (lastSlashPos != std::string::npos) {
+                    fileName = fullPath.substr(lastSlashPos + 1);
+                }
+                send(clientSocket, fileName.c_str(), static_cast<int>(fileName.length()), 0);
             } else {
                 const char* response = "Failed to open the file for reading.";
                 send(clientSocket, response, (int)strlen(response), 0);

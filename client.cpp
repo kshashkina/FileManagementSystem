@@ -71,6 +71,10 @@ public:
                     std::cerr << "Invalid file path." << std::endl;
                 }
             }
+            if (userInput.substr(0, 3) == "GET") {
+                send(clientSocket, userInput.c_str(), (int) userInput.length(), 0);
+                receiveFile();
+            }
             else{
                 send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
                 receiveResponse();
@@ -87,6 +91,45 @@ public:
             std::cout << "Received from server: \n " << buffer << std::endl;
         }
     }
+
+    void receiveFile() {
+        // Receive file content
+        char buffer[1024];
+        char file[1024];
+        memset(buffer, 0, 1024);
+        int bytesReceivedText = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceivedText > 0) {
+            // Receive file name
+            std::string fileName;
+            memset(file, 0, 1024);
+            int bytesReceivedName = recv(clientSocket, file, sizeof(file), 0);
+            if (bytesReceivedName > 0) {
+                fileName = file;
+
+                // Specify the directory where you want to save the files
+                std::string saveDirectory = "C:\\KSE IT\\Client Server Concepts\\csc_first\\clientStorage\\";
+
+                // Ensure the directory separator is correct
+                if (!saveDirectory.empty() && saveDirectory.back() != '\\') {
+                    saveDirectory += '\\';
+                }
+
+                // Save the file with the received name in the specified directory
+                std::ofstream outputFile(saveDirectory + fileName, std::ios::binary);
+                if (outputFile.is_open()) {
+                    outputFile.write(buffer, bytesReceivedText);
+                    std::cout << "File received and saved as: " << saveDirectory + fileName << std::endl;
+                } else {
+                    std::cerr << "Failed to save the file." << std::endl;
+                }
+            } else {
+                std::cerr << "Failed to receive file name." << std::endl;
+            }
+        } else {
+            std::cerr << "Failed to receive file content." << std::endl;
+        }
+    }
+
 
     void sendFile(const std::string& filePath) {
         // Open the file for reading
