@@ -93,19 +93,16 @@ public:
     }
 
     void receiveFile() {
-        // Receive file content
-        char buffer[1024];
-        char file[1024];
-        memset(buffer, 0, 1024);
-        int bytesReceivedText = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceivedText > 0) {
-            // Receive file name
-            std::string fileName;
-            memset(file, 0, 1024);
-            int bytesReceivedName = recv(clientSocket, file, sizeof(file), 0);
-            if (bytesReceivedName > 0) {
-                fileName = file;
+        // Receive file size
+        size_t fileSize;
+        int bytesReceivedSize = recv(clientSocket, reinterpret_cast<char*>(&fileSize), sizeof(fileSize), 0);
 
+        if (bytesReceivedSize > 0) {
+            // Receive file name
+            char fileName[1024];
+            memset(fileName, 0, sizeof(fileName));
+            int bytesReceivedName = recv(clientSocket, fileName, sizeof(fileName), 0);
+            if (bytesReceivedName > 0) {
                 // Specify the directory where you want to save the files
                 std::string saveDirectory = "C:\\KSE IT\\Client Server Concepts\\csc_first\\clientStorage\\";
 
@@ -117,7 +114,23 @@ public:
                 // Save the file with the received name in the specified directory
                 std::ofstream outputFile(saveDirectory + fileName, std::ios::binary);
                 if (outputFile.is_open()) {
-                    outputFile.write(buffer, bytesReceivedText);
+                    // Receive and save the file content in chunks
+                    const int chunkSize = 1024;
+                    char buffer[chunkSize];
+
+                    while (fileSize > 0) {
+                        int bytesToReceive = std::min(chunkSize, static_cast<int>(fileSize));
+                        int bytesReceived = recv(clientSocket, buffer, bytesToReceive, 0);
+
+                        if (bytesReceived > 0) {
+                            outputFile.write(buffer, bytesReceived);
+                            fileSize -= bytesReceived;
+                        } else {
+                            std::cerr << "Failed to receive file content." << std::endl;
+                            break;
+                        }
+                    }
+
                     std::cout << "File received and saved as: " << saveDirectory + fileName << std::endl;
                 } else {
                     std::cerr << "Failed to save the file." << std::endl;
@@ -126,7 +139,7 @@ public:
                 std::cerr << "Failed to receive file name." << std::endl;
             }
         } else {
-            std::cerr << "Failed to receive file content." << std::endl;
+            std::cerr << "Failed to receive file size." << std::endl;
         }
     }
 

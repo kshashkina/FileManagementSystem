@@ -145,12 +145,12 @@ public:
                 size_t fileSize = file.tellg();
                 file.seekg(0, std::ios::beg);
 
-                // Creating a buffer sized as text in order not to reallocate memory
-                std::vector<char> fileContent(fileSize);
-                file.read(fileContent.data(), fileSize);
+                const int chunkSize = 1024;
+                char buffer[chunkSize];
 
-                // Send the file content to the client
-                send(clientSocket, fileContent.data(), static_cast<int>(fileSize), 0);
+                // Send the file size to the client
+                send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
+
 
                 // Send the filename to the client
                 size_t lastSlashPos = fullPath.find_last_of("\\");
@@ -158,6 +158,12 @@ public:
                     fileName = fullPath.substr(lastSlashPos + 1);
                 }
                 send(clientSocket, fileName.c_str(), static_cast<int>(fileName.length()), 0);
+
+                // Send the file content to the client in chunks
+                while (!file.eof()) {
+                    file.read(buffer, chunkSize);
+                    send(clientSocket, buffer, static_cast<int>(file.gcount()), 0);
+                }
             } else {
                 const char* response = "Failed to open the file for reading.";
                 send(clientSocket, response, (int)strlen(response), 0);
