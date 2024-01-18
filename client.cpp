@@ -67,6 +67,7 @@ public:
                     std::string filePath = userInput.substr(startQuotePos + 1, endQuotePos - startQuotePos - 1);
 
                     sendFile(filePath);
+                    continue;
                 } else {
                     std::cerr << "Invalid file path." << std::endl;
                 }
@@ -159,17 +160,21 @@ public:
 
         // Send the PUT command to the server
         std::string putCommand = "PUT " + filePath;
-        send(clientSocket, putCommand.c_str(), (int)putCommand.length(), 0);
+        send(clientSocket, putCommand.c_str(), static_cast<int>(putCommand.length()), 0);
 
         // Send the file size to the server
         send(clientSocket, reinterpret_cast<const char*>(&fileSize), sizeof(fileSize), 0);
 
-        // Send the file data to the server
-        char* buffer = new char[fileSize];
-        fileToSend.read(buffer, fileSize);
-        send(clientSocket, buffer, fileSize, 0);
+        // Send the file data to the server in chunks
+        const int chunkSize = 1024;
+        char buffer[chunkSize];
 
-        delete[] buffer;
+        while (!fileToSend.eof()) {
+            fileToSend.read(buffer, chunkSize);
+            int bytesRead = static_cast<int>(fileToSend.gcount());
+            send(clientSocket, buffer, bytesRead, 0);
+        }
+
         fileToSend.close();
         receiveResponse();
     }

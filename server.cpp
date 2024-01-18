@@ -195,21 +195,24 @@ public:
             return;
         }
 
-        // Receive the file data from the client
-        char* fileData = new char[fileSize];
-        int bytesReceived = recv(clientSocket, fileData, fileSize, 0);
-        if (bytesReceived <= 0) {
-            delete[] fileData;
-            const char* response = "Failed to receive file data.";
-            send(clientSocket, response, (int)strlen(response), 0);
-            return;
-        }
-
-        // Open the file for writing in binary mode
+        // Receive the file data from the client in chunks
         std::ofstream file(fileName, std::ios::binary);
         if (file.is_open()) {
-            // Write the received data to the file
-            file.write(fileData, fileSize);
+            const int chunkSize = 1024;
+            char buffer[chunkSize];
+
+            while (fileSize > 0) {
+                int bytesToReceive = std::min(chunkSize, fileSize);
+                int bytesReceived = recv(clientSocket, buffer, bytesToReceive, 0);
+
+                if (bytesReceived > 0) {
+                    file.write(buffer, bytesReceived);
+                    fileSize -= bytesReceived;
+                } else {
+                    std::cerr << "Failed to receive file content." << std::endl;
+                    break;
+                }
+            }
 
             const char* response = "File received and saved successfully.";
             send(clientSocket, response, (int)strlen(response), 0);
@@ -217,7 +220,6 @@ public:
             const char* response = "Failed to create or write to the file.";
             send(clientSocket, response, (int)strlen(response), 0);
         }
-        delete[] fileData;
     }
 
     void handleInfoCommand(SOCKET clientSocket, const char* buffer) {
