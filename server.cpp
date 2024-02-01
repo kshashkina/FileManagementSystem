@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <thread>
+#include <mutex>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -80,13 +81,16 @@ public:
 
             if (bytesReceived > 0) {
                 buffer[bytesReceived] = '\0';
+
+                std::lock_guard<std::mutex> lock(coutMutex);
                 std::cout << "Received data: " << buffer << std::endl;
 
                 if (strncmp(buffer, "NAME", 4) == 0) {
                     if (userName.empty()) {
                         userName = std::string(buffer + 5);
                     } else {
-                        std::cout << "You have already declared your name!";
+                        const char* response = "You have already declared your name!";
+                        send(clientSocket, response, (int)strlen(response), 0);
                     }
                 } else if (strncmp(buffer, "LIST", 4) == 0) {
                     handleListCommand(clientSocket, userName);
@@ -291,6 +295,7 @@ private:
     sockaddr_in serverAddr;
     WSADATA wsaData;
     bool conected = true;
+    std::mutex coutMutex;
 };
 
 int main() {
