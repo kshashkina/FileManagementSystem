@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <thread>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -55,17 +56,21 @@ public:
         }
 
         std::cout << "Server listening for incoming connections..." << std::endl;
+
+        while (conected) {
+            SOCKET clientSocket = accept(serverSocket, nullptr, nullptr);
+            if (clientSocket == INVALID_SOCKET) {
+                std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
+                cleanup();
+                return false;
+            }
+
+            std::thread(&Server::acceptConnection, this, clientSocket).detach();
+        }
         return true;
     }
 
-    void acceptConnection() {
-        SOCKET clientSocket = accept(serverSocket, nullptr, nullptr);
-        if (clientSocket == INVALID_SOCKET) {
-            std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
-            cleanup();
-            return;
-        }
-
+    void acceptConnection(SOCKET clientSocket) {
         std::string userName;
 
         while (true) {
@@ -77,35 +82,26 @@ public:
                 buffer[bytesReceived] = '\0';
                 std::cout << "Received data: " << buffer << std::endl;
 
-                if (strncmp(buffer, "NAME", 4) == 0){
-                    if (userName.empty()){
+                if (strncmp(buffer, "NAME", 4) == 0) {
+                    if (userName.empty()) {
                         userName = std::string(buffer + 5);
+                    } else {
+                        std::cout << "You have already declared your name!";
                     }
-                    else
-                    {
-                        std::cout<< "You have already declared your name!";
-                    }
-                }
-                else if (strncmp(buffer, "LIST", 4) == 0) {
+                } else if (strncmp(buffer, "LIST", 4) == 0) {
                     handleListCommand(clientSocket, userName);
-                }
-                else if (strncmp(buffer, "DELETE", 6) == 0){
+                } else if (strncmp(buffer, "DELETE", 6) == 0) {
                     handleDeleteCommand(clientSocket, buffer, userName);
-                }
-                else if (strncmp(buffer, "GET", 3) == 0){
+                } else if (strncmp(buffer, "GET", 3) == 0) {
                     handleGetCommand(clientSocket, buffer, userName);
-                }
-                else if (strncmp(buffer, "PUT", 3) == 0){
+                } else if (strncmp(buffer, "PUT", 3) == 0) {
                     handlePutCommand(clientSocket, buffer, userName);
-                }
-                else if (strncmp(buffer, "INFO", 4) == 0){
+                } else if (strncmp(buffer, "INFO", 4) == 0) {
                     handleInfoCommand(clientSocket, buffer, userName);
-                }
-                else if (strncmp(buffer, "EXIT", 4) == 0){
+                } else if (strncmp(buffer, "EXIT", 4) == 0) {
                     conected = false;
                     break;
-                }
-                else {
+                } else {
                     const char* response = "Unknown command.";
                     send(clientSocket, response, (int)strlen(response), 0);
                 }
@@ -302,7 +298,6 @@ int main() {
 
     if (server.init() && server.startListening()) {
         while (server.checkConnection()){
-            server.acceptConnection();
         }
     }
 
