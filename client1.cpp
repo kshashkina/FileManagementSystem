@@ -2,6 +2,7 @@
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
 #include <fstream>
+#include <filesystem>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -79,7 +80,8 @@ public:
             }
             if (userInput.substr(0, 3) == "GET") {
                 send(clientSocket, userInput.c_str(), (int) userInput.length(), 0);
-                receiveFile();
+                std::string folderName = userName.substr(5);
+                receiveFile(folderName);
             }
             else{
                 send(clientSocket, userInput.c_str(), (int)userInput.length(), 0);
@@ -98,7 +100,8 @@ public:
         }
     }
 
-    void receiveFile() {
+    void receiveFile(const std::string& userName) {
+        ensureUserFolderExists(userName);
         // Receive file size
         size_t fileSize;
         int bytesReceivedSize = recv(clientSocket, reinterpret_cast<char*>(&fileSize), sizeof(fileSize), 0);
@@ -110,7 +113,7 @@ public:
             int bytesReceivedName = recv(clientSocket, fileName, sizeof(fileName), 0);
             if (bytesReceivedName > 0) {
                 // Specify the directory where you want to save the files
-                std::string saveDirectory = "C:\\KSE IT\\Client Server Concepts\\csc_first\\clientStorage\\";
+                std::string saveDirectory = "C:\\KSE IT\\Client Server Concepts\\csc_first\\clientStorage\\" + userName + "\\";
 
                 // Ensure the directory separator is correct
                 if (!saveDirectory.empty() && saveDirectory.back() != '\\') {
@@ -191,6 +194,14 @@ public:
         }
 
         WSACleanup();
+    }
+
+    void ensureUserFolderExists(const std::string& userName) {
+        std::filesystem::path userFolderPath = "C:\\KSE IT\\Client Server Concepts\\csc_first\\clientStorage\\" + userName;
+
+        if (!std::filesystem::exists(userFolderPath)) {
+            std::filesystem::create_directory(userFolderPath);
+        }
     }
 
 private:
