@@ -66,6 +66,8 @@ public:
             return;
         }
 
+        std::string userName;
+
         while (true) {
             char buffer[1024];
             memset(buffer, 0, 1024);
@@ -75,20 +77,29 @@ public:
                 buffer[bytesReceived] = '\0';
                 std::cout << "Received data: " << buffer << std::endl;
 
-                if (strncmp(buffer, "LIST", 4) == 0) {
-                    handleListCommand(clientSocket);
+                if (strncmp(buffer, "NAME", 4) == 0){
+                    if (userName.empty()){
+                        userName = std::string(buffer + 5);
+                    }
+                    else
+                    {
+                        std::cout<< "You have already declared your name!";
+                    }
+                }
+                else if (strncmp(buffer, "LIST", 4) == 0) {
+                    handleListCommand(clientSocket, userName);
                 }
                 else if (strncmp(buffer, "DELETE", 6) == 0){
-                    handleDeleteCommand(clientSocket, buffer);
+                    handleDeleteCommand(clientSocket, buffer, userName);
                 }
                 else if (strncmp(buffer, "GET", 3) == 0){
-                    handleGetCommand(clientSocket, buffer);
+                    handleGetCommand(clientSocket, buffer, userName);
                 }
                 else if (strncmp(buffer, "PUT", 3) == 0){
-                    handlePutCommand(clientSocket, buffer);
+                    handlePutCommand(clientSocket, buffer, userName);
                 }
                 else if (strncmp(buffer, "INFO", 4) == 0){
-                    handleInfoCommand(clientSocket, buffer);
+                    handleInfoCommand(clientSocket, buffer, userName);
                 }
                 else if (strncmp(buffer, "EXIT", 4) == 0){
                     conected = false;
@@ -104,10 +115,11 @@ public:
     }
 
 
-    void handleListCommand(SOCKET clientSocket) {
+    void handleListCommand(SOCKET clientSocket, const std::string& userName) {
+        ensureUserFolderExists(userName);
         std::ostringstream fileList;
 
-        for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage")) {
+        for (const auto& entry : std::filesystem::directory_iterator("C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName)) {
             fileList << entry.path().filename().string() << "\n";
         }
 
@@ -115,9 +127,10 @@ public:
         send(clientSocket, fileListStr.c_str(), (int)fileListStr.length(), 0);
     }
 
-    void handleDeleteCommand(SOCKET clientSocket, const char* buffer) {
+    void handleDeleteCommand(SOCKET clientSocket, const char* buffer, const std::string& userName) {
+        ensureUserFolderExists(userName);
         std::string fileName(buffer + 7);
-        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName + "\\" + fileName;
 
         if (std::filesystem::exists(fileName)) {
             if (std::filesystem::remove(fileName)) {
@@ -133,9 +146,10 @@ public:
         }
     }
 
-    void handleGetCommand(SOCKET clientSocket, const char* buffer) {
+    void handleGetCommand(SOCKET clientSocket, const char* buffer, const std::string& userName) {
+        ensureUserFolderExists(userName);
         std::string fileName(buffer + 4);
-        std::string fullPath = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        std::string fullPath = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName + "\\" + fileName;
 
         if (std::filesystem::exists(fullPath)) {
             std::ifstream file(fullPath, std::ios::binary);
@@ -174,13 +188,14 @@ public:
         }
     }
 
-    void handlePutCommand(SOCKET clientSocket, const char* buffer) {
+    void handlePutCommand(SOCKET clientSocket, const char* buffer, const std::string& userName) {
+        ensureUserFolderExists(userName);
         std::string fileName(buffer + 4);
         size_t pos = fileName.find_last_of("/\\");
         if (pos != std::string::npos) {
             fileName = fileName.substr(pos + 1);
         }
-        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName + "\\" + fileName;
         if (std::filesystem::exists(fileName)) {
             const char* response = "File already exists.";
             send(clientSocket, response, (int)strlen(response), 0);
@@ -222,9 +237,10 @@ public:
         }
     }
 
-    void handleInfoCommand(SOCKET clientSocket, const char* buffer) {
+    void handleInfoCommand(SOCKET clientSocket, const char* buffer, const std::string& userName) {
+        ensureUserFolderExists(userName);
         std::string fileName(buffer + 5);
-        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + fileName;
+        fileName = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName + "\\" + fileName;
 
         // Get information about the file
         std::filesystem::path filePath(fileName);
@@ -258,6 +274,15 @@ public:
             serverSocket = INVALID_SOCKET;
         }
         WSACleanup();
+    }
+
+    void ensureUserFolderExists(const std::string& userName) {
+        std::filesystem::path userFolderPath = "C:\\KSE IT\\Client Server Concepts\\csc_first\\serverStorage\\" + userName;
+
+        if (!std::filesystem::exists(userFolderPath)) {
+            std::filesystem::create_directory(userFolderPath);
+            std::cout << "User folder created: " << userFolderPath << std::endl;
+        }
     }
 
     bool checkConnection(){

@@ -48,6 +48,11 @@ public:
     }
 
     void communicate() {
+        std::cout << "Enter your name using NAME <'yourName'>" << std::endl;
+        std::string userName;
+        std::getline(std::cin, userName);
+        send(clientSocket, userName.c_str(), (int)userName.length(), 0);
+        std::cin.clear();
         std::cout << "Commands:\nGET <filename> to get file\nLIST to get file list\nPUT <filename> to create new file\nDELETE <filename> to delete file\nINFO <filename> to get information about file\nEXIT to exit\n";
         while (true) {
             std::string userInput;
