@@ -25,6 +25,17 @@ Parses the received command.
 - Command Execution:
 Identifies the command type by inspecting the received buffer.
 Invokes corresponding handler functions.
+### Byte-Level Details
+- Data Transmission Protocol:
+All communication between the client and server is text-based.
+Commands and responses are transmitted as strings.
+The server handles each command by processing the received string.
+- Buffer Size:
+The server and client use a buffer size of 1024 bytes for sending and receiving data.
+Commands and responses are transmitted in chunks if they exceed the buffer size.
+- Transmission Quantities:
+The server sends responses with a maximum size of 1024 bytes to fit the expected data.
+Commands and responses are transmitted in chunks if they exceed the buffer size.
 ## Client Side
 ### Client Interaction
 - Command Input:
@@ -36,6 +47,13 @@ After sending a command, the client waits for and receives a response from the s
 Displays the response to the user.
 - User Interaction Loop:
 The client enters a loop where the user can continue entering commands until choosing to exit.
+### Byte-Level Details
+- Data Transmission Protocol:
+Similar to the server, the client communicates with the server using text-based commands and responses.
+Commands and responses are transmitted as strings.
+- Buffer Size:
+The client uses a buffer size of 1024 bytes for sending and receiving data.
+Commands and responses are transmitted in chunks if they exceed the buffer size.
 ## Command Details
 #### LIST Command Handling:
 Client sends "LIST" to request a list of files.
