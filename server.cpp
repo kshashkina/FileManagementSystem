@@ -17,6 +17,21 @@ public:
         cleanup();
     }
 
+    void run(){
+        if (init() && startListening()) {
+            while (checkConnection()){
+            }
+        }
+    }
+
+private:
+    int port;
+    SOCKET serverSocket;
+    sockaddr_in serverAddr;
+    WSADATA wsaData;
+    bool conected = true;
+    std::mutex coutMutex;
+
     bool init() {
         // Initialize Winsock
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -57,18 +72,25 @@ public:
         }
 
         std::cout << "Server listening for incoming connections..." << std::endl;
+        handleConnections();
+        return true;
+    }
 
-        while (conected) {
+    bool checkConnection() {
+        return conected;
+    }
+
+    void handleConnections() {
+        while (true) {
             SOCKET clientSocket = accept(serverSocket, nullptr, nullptr);
             if (clientSocket == INVALID_SOCKET) {
                 std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
                 cleanup();
-                return false;
+                return;
             }
 
             std::thread(&Server::acceptConnection, this, clientSocket).detach();
         }
-        return true;
     }
 
     void acceptConnection(SOCKET clientSocket) {
@@ -284,27 +306,10 @@ public:
             std::cout << "User folder created: " << userFolderPath << std::endl;
         }
     }
-
-    bool checkConnection(){
-        return conected;
-    }
-
-private:
-    int port;
-    SOCKET serverSocket;
-    sockaddr_in serverAddr;
-    WSADATA wsaData;
-    bool conected = true;
-    std::mutex coutMutex;
 };
 
 int main() {
     Server server(12345);
-
-    if (server.init() && server.startListening()) {
-        while (server.checkConnection()){
-        }
-    }
-
+    server.run();
     return 0;
 }
